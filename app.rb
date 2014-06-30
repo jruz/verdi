@@ -26,32 +26,33 @@ end
 def get_data_from_name(original_name)
   clean_name  = name_cleaner(original_name)
   response    = HTTParty.get "http://www.omdbapi.com/?t=#{clean_name}"
-  parsed      = JSON.parse(response)
-  data        = { rating: parsed['imdbRating'], year: parsed['Year'] }
-  return data
+  return JSON.parse(response)
 end
 
 def get_data_from_id(movie_id)
   response    = HTTParty.get "http://www.omdbapi.com/?i=#{movie_id}"
-  parsed      = JSON.parse(response)
-  data        = { rating: parsed['imdbRating'], year: parsed['Year'] }
-  return data
+  return JSON.parse(response)
 end
 
 agent = Mechanize.new
 agent.get 'http://www.cines-verdi.com/barcelona/cartelera/'
 items = agent.page.search('.whitetitulo')
+results = []
 
 items.each do |item|
   movie_url     = item.attributes['href'].value
   spanish_name  = item.text
   original_name = get_original_name(movie_url)
   data          = get_data_from_name(original_name)
-  if data[:rating].nil?
+  if data['Response'] === 'False'
     movie_id  = get_id_from_imdb(original_name)
     data      = get_data_from_id(movie_id)
   end
-  result = "#{spanish_name} | #{data[:year]} | #{data[:rating]}"
-  result = result.colorize(:yellow) if data[:rating].to_f >= 7.5
-  puts result
+  result = "#{data['imdbRating']} | #{spanish_name} | #{data['Year']} | #{data['Country']} | #{data['Awards']}"
+  result = result.colorize(:yellow) if data['imdbRating'].to_f >= 7.5
+  result = result.colorize(:green) if data['imdbRating'].to_f >= 8
+  results << [data['imdbRating'].to_f, result]
 end
+
+results = results.sort_by { |rating, text| rating }.reverse
+results.each { |result| puts result[1] }
