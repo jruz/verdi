@@ -12,7 +12,7 @@ def get_original_name(movie_url)
 end
 
 def name_cleaner(original_name)
-  return URI::encode(original_name)
+  return URI::encode(original_name.gsub("'",' '))
 end
 
 def get_id_from_imdb(original_name)
@@ -20,7 +20,11 @@ def get_id_from_imdb(original_name)
   agent = Mechanize.new
   agent.get "http://www.imdb.com/find?q=#{clean_name}&s=tt&ttype=ft&exact=true"
   items = agent.page.search('td.result_text a')
-  return items.first.attributes['href'].value.gsub('/title/','').gsub('/?ref_=fn_ft_tt_1','')
+  if items.first
+    return items.first.attributes['href'].value.gsub('/title/','').gsub('/?ref_=fn_ft_tt_1','')
+  else
+    return false
+  end
 end
 
 def get_data_from_name(original_name)
@@ -45,8 +49,8 @@ items.each do |item|
   original_name = get_original_name(movie_url)
   data          = get_data_from_name(original_name)
   if data['Response'] === 'False'
-    movie_id  = get_id_from_imdb(original_name)
-    data      = get_data_from_id(movie_id)
+    movie_id  = get_id_from_imdb(original_name) || get_id_from_imdb(spanish_name)
+    data      = get_data_from_id(movie_id) if movie_id
   end
   result = "#{data['imdbRating']} | #{spanish_name} | #{data['Year']} | #{data['Country']} | #{data['Awards']}"
   result = result.colorize(:yellow) if data['imdbRating'].to_f >= 7.5
